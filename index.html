@@ -1,0 +1,1554 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Deep Ocean - Living Underwater World</title>
+
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+<style>
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #001020;
+}
+
+#title {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+    font-size: 25px;
+    font-weight: bold;
+
+    letter-spacing: 4px;
+    text-shadow:
+        0 0 8px #00eaff,
+        0 0 20px #008cff,
+        0 3px 5px black;
+
+    pointer-events: none;
+}
+
+#info {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    z-index: 20;
+    color: #bffaff;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    text-shadow: 0 2px 4px black;
+    pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="title">DEEP OCEAN EXPLORER</div>
+<div id="info">WASD to move • Mouse to look • Explore the reef</div>
+
+<a-scene
+    renderer="
+        antialias:true;
+        colorManagement:true;
+        physicallyCorrectLights:true
+    "
+    fog="
+        type: exponential;
+        color:#001b35;
+        density:0.018
+    "
+    background="color:#001225">
+
+<!-- ========================================================= -->
+<!-- SKY / BACKGROUND -->
+<!-- ========================================================= -->
+
+<a-sky
+    color="#00152d">
+</a-sky>
+
+
+<!-- ========================================================= -->
+<!-- LIGHTING -->
+<!-- ========================================================= -->
+
+<a-light
+    type="ambient"
+    color="#376d9a"
+    intensity="1.2">
+</a-light>
+
+<a-light
+    type="directional"
+    position="0 25 5"
+    rotation="-55 15 0"
+    color="#54ddff"
+    intensity="2.2">
+</a-light>
+
+<a-light
+    type="point"
+    position="-15 3 -15"
+    color="#0066ff"
+    intensity="3"
+    distance="35">
+</a-light>
+
+<a-light
+    type="point"
+    position="15 2 -20"
+    color="#ff22cc"
+    intensity="2.5"
+    distance="30">
+</a-light>
+
+<a-light
+    type="point"
+    position="0 -2 -10"
+    color="#00ffcc"
+    intensity="2"
+    distance="25">
+</a-light>
+
+
+<!-- ========================================================= -->
+<!-- WATER VOLUME -->
+<!-- ========================================================= -->
+
+<a-box
+    position="0 8 -10"
+    width="100"
+    height="40"
+    depth="100"
+    material="
+        color:#007da8;
+        opacity:0.08;
+        transparent:true;
+        side:double;
+        shader:flat">
+</a-box>
+
+
+<!-- ========================================================= -->
+<!-- OCEAN FLOOR -->
+<!-- ========================================================= -->
+
+<a-plane
+    position="0 -10 0"
+    rotation="-90 0 0"
+    width="100"
+    height="100"
+    color="#123b42">
+</a-plane>
+
+<a-plane
+    position="0 -9.88 0"
+    rotation="-90 0 0"
+    width="100"
+    height="100"
+    color="#214c4d"
+    opacity="0.7">
+</a-plane>
+
+
+<!-- ========================================================= -->
+<!-- CAMERA -->
+<!-- ========================================================= -->
+
+<a-entity
+    id="cameraRig"
+    position="0 5 18">
+
+    <a-camera
+        wasd-controls="acceleration:25"
+        look-controls="pointerLockEnabled:false"
+        position="0 0 0">
+
+        <a-cursor
+            color="#ffffff"
+            fuse="false">
+        </a-cursor>
+
+    </a-camera>
+
+</a-entity>
+
+
+<!-- ========================================================= -->
+<!-- SUNBEAMS -->
+<!-- ========================================================= -->
+
+<a-entity id="sunbeams">
+
+    <a-cone
+        position="-18 13 -20"
+        rotation="180 0 0"
+        radius-bottom="7"
+        radius-top="0.5"
+        height="35"
+        color="#55eaff"
+        opacity="0.06"
+        material="transparent:true">
+    </a-cone>
+
+    <a-cone
+        position="-7 14 -15"
+        rotation="180 0 0"
+        radius-bottom="5"
+        radius-top="0.5"
+        height="35"
+        color="#8cf7ff"
+        opacity="0.07"
+        material="transparent:true">
+    </a-cone>
+
+    <a-cone
+        position="7 14 -18"
+        rotation="180 0 0"
+        radius-bottom="6"
+        radius-top="0.5"
+        height="35"
+        color="#3ccfff"
+        opacity="0.06"
+        material="transparent:true">
+    </a-cone>
+
+    <a-cone
+        position="18 14 -10"
+        rotation="180 0 0"
+        radius-bottom="5"
+        radius-top="0.5"
+        height="35"
+        color="#66eaff"
+        opacity="0.06"
+        material="transparent:true">
+    </a-cone>
+
+</a-entity>
+
+
+<!-- ========================================================= -->
+<!-- PROCEDURAL OCEAN WORLD -->
+<!-- ========================================================= -->
+
+<a-entity id="world"></a-entity>
+
+
+<script>
+
+const world = document.querySelector("#world");
+
+
+// ------------------------------------------------------------
+// UTILITIES
+// ------------------------------------------------------------
+
+function rand(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function choose(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function posY(min, max) {
+    return rand(min, max);
+}
+
+const fishColors = [
+    "#ff3b30",
+    "#ff7a00",
+    "#ffd400",
+    "#00e5ff",
+    "#00ff88",
+    "#ff28c8",
+    "#8c52ff",
+    "#ff4fa3",
+    "#36ffea",
+    "#72ff00",
+    "#ffffff"
+];
+
+const coralColors = [
+    "#ff3366",
+    "#ff6b35",
+    "#ff1493",
+    "#a855f7",
+    "#ffcc00",
+    "#00e5ff",
+    "#00ffaa",
+    "#ff4fd8"
+];
+
+const plantColors = [
+    "#00ff88",
+    "#00cc66",
+    "#35e8a0",
+    "#66ff33",
+    "#00ffaa",
+    "#19b875"
+];
+
+
+// ------------------------------------------------------------
+// FISH
+// ------------------------------------------------------------
+
+function createFish(x, y, z, scale, color, speed, direction) {
+
+    const fish = document.createElement("a-entity");
+
+    fish.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    fish.setAttribute(
+        "scale",
+        `${scale} ${scale} ${scale}`
+    );
+
+    fish.setAttribute(
+        "rotation",
+        `0 ${direction > 0 ? 0 : 180} 0`
+    );
+
+    const body = document.createElement("a-sphere");
+
+    body.setAttribute("radius", "0.65");
+
+    body.setAttribute(
+        "scale",
+        "1.7 0.75 0.7"
+    );
+
+    body.setAttribute(
+        "material",
+        `color:${color}; roughness:0.25; metalness:0.05`
+    );
+
+    fish.appendChild(body);
+
+
+    // Tail
+
+    const tail = document.createElement("a-cone");
+
+    tail.setAttribute(
+        "position",
+        "-1.1 0 0"
+    );
+
+    tail.setAttribute(
+        "rotation",
+        "0 0 90"
+    );
+
+    tail.setAttribute(
+        "radius-bottom",
+        "0.75"
+    );
+
+    tail.setAttribute(
+        "radius-top",
+        "0"
+    );
+
+    tail.setAttribute(
+        "height",
+        "1.4"
+    );
+
+    tail.setAttribute(
+        "material",
+        `color:${color}`
+    );
+
+    fish.appendChild(tail);
+
+
+    // Top fin
+
+    const fin = document.createElement("a-cone");
+
+    fin.setAttribute(
+        "position",
+        "0 0.65 0"
+    );
+
+    fin.setAttribute(
+        "rotation",
+        "0 0 180"
+    );
+
+    fin.setAttribute(
+        "radius-bottom",
+        "0.35"
+    );
+
+    fin.setAttribute(
+        "radius-top",
+        "0"
+    );
+
+    fin.setAttribute(
+        "height",
+        "0.8"
+    );
+
+    fin.setAttribute(
+        "material",
+        `color:${color}`
+    );
+
+    fish.appendChild(fin);
+
+
+    // Eyes
+
+    const eye1 = document.createElement("a-sphere");
+
+    eye1.setAttribute(
+        "position",
+        "0.75 0.22 -0.52"
+    );
+
+    eye1.setAttribute("radius", "0.11");
+
+    eye1.setAttribute(
+        "material",
+        "color:#ffffff"
+    );
+
+    fish.appendChild(eye1);
+
+
+    const pupil = document.createElement("a-sphere");
+
+    pupil.setAttribute(
+        "position",
+        "0.79 0.22 -0.60"
+    );
+
+    pupil.setAttribute("radius", "0.055");
+
+    pupil.setAttribute(
+        "material",
+        "color:#000000"
+    );
+
+    fish.appendChild(pupil);
+
+
+    // Movement
+
+    const endX = direction > 0
+        ? x + rand(15, 30)
+        : x - rand(15, 30);
+
+    fish.setAttribute(
+        "animation__swim",
+        `
+        property:position;
+        to:${endX} ${y + rand(-2,2)} ${z + rand(-4,4)};
+        dur:${speed};
+        easing:easeInOutSine;
+        loop:true;
+        dir:alternate
+        `
+    );
+
+    fish.setAttribute(
+        "animation__bob",
+        `
+        property:rotation;
+        from:0 ${direction > 0 ? 0 : 180} -5;
+        to:0 ${direction > 0 ? 0 : 180} 5;
+        dur:${rand(1000,2000)};
+        loop:true;
+        dir:alternate
+        `
+    );
+
+    world.appendChild(fish);
+}
+
+
+// Create many fish
+
+for (let i = 0; i < 55; i++) {
+
+    createFish(
+        rand(-30,30),
+        rand(-1,12),
+        rand(-45,8),
+        rand(0.35,1.2),
+        choose(fishColors),
+        rand(7000,15000),
+        Math.random() > 0.5 ? 1 : -1
+    );
+}
+
+
+// ------------------------------------------------------------
+// SMALL FISH SCHOOLS
+// ------------------------------------------------------------
+
+function createSchool(x, y, z, color) {
+
+    for (let i = 0; i < 12; i++) {
+
+        createFish(
+            x + rand(-4,4),
+            y + rand(-2,2),
+            z + rand(-3,3),
+            rand(0.18,0.35),
+            color,
+            rand(5000,9000),
+            Math.random() > 0.5 ? 1 : -1
+        );
+    }
+}
+
+createSchool(-12, 5, -15, "#00eaff");
+createSchool(15, 7, -25, "#ffcc00");
+createSchool(0, 2, -35, "#ff4fd8");
+
+
+// ------------------------------------------------------------
+// SHARKS
+// ------------------------------------------------------------
+
+function createShark(x,y,z,scale) {
+
+    const shark = document.createElement("a-entity");
+
+    shark.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    shark.setAttribute(
+        "scale",
+        `${scale} ${scale} ${scale}`
+    );
+
+    const body = document.createElement("a-sphere");
+
+    body.setAttribute(
+        "scale",
+        "3.2 0.8 1"
+    );
+
+    body.setAttribute(
+        "material",
+        "color:#718b9b; roughness:0.5"
+    );
+
+    shark.appendChild(body);
+
+
+    const nose = document.createElement("a-cone");
+
+    nose.setAttribute(
+        "position",
+        "3 0 0"
+    );
+
+    nose.setAttribute(
+        "rotation",
+        "0 0 -90"
+    );
+
+    nose.setAttribute(
+        "radius-bottom",
+        "1"
+    );
+
+    nose.setAttribute(
+        "height",
+        "2"
+    );
+
+    nose.setAttribute(
+        "material",
+        "color:#718b9b"
+    );
+
+    shark.appendChild(nose);
+
+
+    const tail = document.createElement("a-cone");
+
+    tail.setAttribute(
+        "position",
+        "-3.2 0 0"
+    );
+
+    tail.setAttribute(
+        "rotation",
+        "0 0 90"
+    );
+
+    tail.setAttribute(
+        "radius-bottom",
+        "1.3"
+    );
+
+    tail.setAttribute(
+        "height",
+        "2.5"
+    );
+
+    tail.setAttribute(
+        "material",
+        "color:#536d7a"
+    );
+
+    shark.appendChild(tail);
+
+
+    const fin = document.createElement("a-cone");
+
+    fin.setAttribute(
+        "position",
+        "0 1 0"
+    );
+
+    fin.setAttribute(
+        "radius-bottom",
+        "0.7"
+    );
+
+    fin.setAttribute(
+        "height",
+        "2"
+    );
+
+    fin.setAttribute(
+        "material",
+        "color:#506977"
+    );
+
+    shark.appendChild(fin);
+
+
+    shark.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${x + rand(-15,15)} ${y + rand(-2,3)} ${z};
+        dur:20000;
+        loop:true;
+        dir:alternate;
+        easing:easeInOutSine
+        `
+    );
+
+    world.appendChild(shark);
+}
+
+createShark(-20,7,-30,1.5);
+createShark(18,9,-40,1.1);
+createShark(-5,3,-45,0.9);
+
+
+// ------------------------------------------------------------
+// JELLYFISH
+// ------------------------------------------------------------
+
+function createJelly(x,y,z,scale,color) {
+
+    const jelly = document.createElement("a-entity");
+
+    jelly.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    jelly.setAttribute(
+        "scale",
+        `${scale} ${scale} ${scale}`
+    );
+
+
+    const dome = document.createElement("a-sphere");
+
+    dome.setAttribute(
+        "scale",
+        "1 0.55 1"
+    );
+
+    dome.setAttribute(
+        "material",
+        `
+        color:${color};
+        opacity:0.65;
+        transparent:true;
+        emissive:${color};
+        emissiveIntensity:0.5
+        `
+    );
+
+    jelly.appendChild(dome);
+
+
+    for(let i=0;i<7;i++) {
+
+        const tentacle = document.createElement("a-cylinder");
+
+        tentacle.setAttribute(
+            "position",
+            `${-0.6+i*0.2} -0.8 0`
+        );
+
+        tentacle.setAttribute(
+            "radius",
+            "0.045"
+        );
+
+        tentacle.setAttribute(
+            "height",
+            rand(1.3,2.4)
+        );
+
+        tentacle.setAttribute(
+            "material",
+            `color:${color}; emissive:${color}`
+        );
+
+        jelly.appendChild(tentacle);
+    }
+
+
+    jelly.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${x+rand(-3,3)} ${y+rand(2,5)} ${z+rand(-2,2)};
+        dur:${rand(3500,6000)};
+        loop:true;
+        dir:alternate;
+        easing:easeInOutSine
+        `
+    );
+
+    world.appendChild(jelly);
+}
+
+
+for(let i=0;i<18;i++) {
+
+    createJelly(
+        rand(-25,25),
+        rand(2,14),
+        rand(-45,2),
+        rand(0.4,1.1),
+        choose([
+            "#ff3cff",
+            "#8c52ff",
+            "#00eaff",
+            "#00ffcc",
+            "#ff72d2",
+            "#66ff44"
+        ])
+    );
+}
+
+
+// ------------------------------------------------------------
+// SEAWEED FORESTS
+// ------------------------------------------------------------
+
+function createSeaweed(x,y,z) {
+
+    const group = document.createElement("a-entity");
+
+    group.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    for(let i=0;i<rand(4,9);i++) {
+
+        const plant = document.createElement("a-cylinder");
+
+        plant.setAttribute(
+            "position",
+            `${rand(-2,2)} ${rand(1,2)} ${rand(-1,1)}`
+        );
+
+        plant.setAttribute(
+            "radius",
+            rand(0.07,0.16)
+        );
+
+        plant.setAttribute(
+            "height",
+            rand(3,7)
+        );
+
+        const color = choose(plantColors);
+
+        plant.setAttribute(
+            "material",
+            `
+            color:${color};
+            emissive:${color};
+            emissiveIntensity:0.15
+            `
+        );
+
+        plant.setAttribute(
+            "animation",
+            `
+            property:rotation;
+            from:0 0 -12;
+            to:0 0 12;
+            dur:${rand(1600,3000)};
+            loop:true;
+            dir:alternate;
+            easing:easeInOutSine
+            `
+        );
+
+        group.appendChild(plant);
+    }
+
+    world.appendChild(group);
+}
+
+
+for(let i=0;i<32;i++) {
+
+    createSeaweed(
+        rand(-38,38),
+        -8.5,
+        rand(-45,5)
+    );
+}
+
+
+// ------------------------------------------------------------
+// CORAL REEFS
+// ------------------------------------------------------------
+
+function createCoral(x,y,z) {
+
+    const reef = document.createElement("a-entity");
+
+    reef.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+
+    const mainColor = choose(coralColors);
+
+
+    for(let i=0;i<rand(5,12);i++) {
+
+        const branch = document.createElement("a-cylinder");
+
+        branch.setAttribute(
+            "position",
+            `${rand(-2,2)} ${rand(0.5,2)} ${rand(-2,2)}`
+        );
+
+        branch.setAttribute(
+            "radius",
+            rand(0.1,0.3)
+        );
+
+        branch.setAttribute(
+            "height",
+            rand(1.5,4)
+        );
+
+        branch.setAttribute(
+            "rotation",
+            `${rand(-15,15)} ${rand(0,360)} ${rand(-25,25)}`
+        );
+
+        branch.setAttribute(
+            "material",
+            `
+            color:${mainColor};
+            emissive:${mainColor};
+            emissiveIntensity:0.15
+            `
+        );
+
+        reef.appendChild(branch);
+
+
+        const tip = document.createElement("a-sphere");
+
+        tip.setAttribute(
+            "position",
+            `${rand(-2,2)} ${rand(2,4)} ${rand(-2,2)}`
+        );
+
+        tip.setAttribute(
+            "radius",
+            rand(0.15,0.35)
+        );
+
+        tip.setAttribute(
+            "material",
+            `color:${mainColor}; emissive:${mainColor}`
+        );
+
+        reef.appendChild(tip);
+    }
+
+    world.appendChild(reef);
+}
+
+
+for(let i=0;i<20;i++) {
+
+    createCoral(
+        rand(-35,35),
+        -9,
+        rand(-42,2)
+    );
+}
+
+
+// ------------------------------------------------------------
+// GIANT ANEMONES
+// ------------------------------------------------------------
+
+function createAnemone(x,z,color) {
+
+    const group = document.createElement("a-entity");
+
+    group.setAttribute(
+        "position",
+        `${x} -8.8 ${z}`
+    );
+
+    for(let i=0;i<18;i++) {
+
+        const tentacle = document.createElement("a-cylinder");
+
+        const angle = (i/18)*Math.PI*2;
+
+        tentacle.setAttribute(
+            "position",
+            `${Math.cos(angle)*0.7} ${rand(0.6,1.3)} ${Math.sin(angle)*0.7}`
+        );
+
+        tentacle.setAttribute(
+            "radius",
+            "0.07"
+        );
+
+        tentacle.setAttribute(
+            "height",
+            rand(1,2)
+        );
+
+        tentacle.setAttribute(
+            "material",
+            `
+            color:${color};
+            emissive:${color};
+            emissiveIntensity:0.3
+            `
+        );
+
+        tentacle.setAttribute(
+            "animation",
+            `
+            property:rotation;
+            from:0 0 -12;
+            to:0 0 12;
+            dur:${rand(1200,2200)};
+            loop:true;
+            dir:alternate
+            `
+        );
+
+        group.appendChild(tentacle);
+    }
+
+    world.appendChild(group);
+}
+
+
+for(let i=0;i<15;i++) {
+
+    createAnemone(
+        rand(-35,35),
+        rand(-42,2),
+        choose([
+            "#ff2277",
+            "#ff8800",
+            "#00eaff",
+            "#b833ff",
+            "#00ff88"
+        ])
+    );
+}
+
+
+// ------------------------------------------------------------
+// ROCKS
+// ------------------------------------------------------------
+
+for(let i=0;i<45;i++) {
+
+    const rock = document.createElement("a-icosahedron");
+
+    rock.setAttribute(
+        "position",
+        `${rand(-40,40)} ${rand(-9.8,-8.8)} ${rand(-45,4)}`
+    );
+
+    rock.setAttribute(
+        "radius",
+        rand(0.4,2.2)
+    );
+
+    rock.setAttribute(
+        "scale",
+        `${rand(0.7,2)} ${rand(0.5,1)} ${rand(0.7,2)}`
+    );
+
+    rock.setAttribute(
+        "material",
+        `color:${choose([
+            "#263d45",
+            "#34505a",
+            "#3d5552",
+            "#1f3945",
+            "#4a4e4a"
+        ])}`
+    );
+
+    world.appendChild(rock);
+}
+
+
+// ------------------------------------------------------------
+// GLOWING DEEP SEA PLANTS
+// ------------------------------------------------------------
+
+function createGlowPlant(x,y,z) {
+
+    const group = document.createElement("a-entity");
+
+    group.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    const color = choose([
+        "#00ffff",
+        "#ff00ff",
+        "#00ff88",
+        "#8c52ff"
+    ]);
+
+    for(let i=0;i<6;i++) {
+
+        const branch = document.createElement("a-cylinder");
+
+        branch.setAttribute(
+            "position",
+            `${rand(-0.7,0.7)} ${rand(1,2)} ${rand(-0.7,0.7)}`
+        );
+
+        branch.setAttribute(
+            "radius",
+            "0.06"
+        );
+
+        branch.setAttribute(
+            "height",
+            rand(2,4)
+        );
+
+        branch.setAttribute(
+            "material",
+            `
+            color:${color};
+            emissive:${color};
+            emissiveIntensity:2
+            `
+        );
+
+        group.appendChild(branch);
+    }
+
+    world.appendChild(group);
+}
+
+
+for(let i=0;i<25;i++) {
+
+    createGlowPlant(
+        rand(-35,35),
+        -9,
+        rand(-45,0)
+    );
+}
+
+
+// ------------------------------------------------------------
+// BUBBLES
+// ------------------------------------------------------------
+
+for(let i=0;i<90;i++) {
+
+    const bubble = document.createElement("a-sphere");
+
+    const x = rand(-35,35);
+    const y = rand(-8,8);
+    const z = rand(-40,5);
+
+    bubble.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    bubble.setAttribute(
+        "radius",
+        rand(0.03,0.15)
+    );
+
+    bubble.setAttribute(
+        "material",
+        `
+        color:#b8f7ff;
+        opacity:0.55;
+        transparent:true;
+        emissive:#55ddff;
+        emissiveIntensity:0.3
+        `
+    );
+
+    bubble.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${x+rand(-1,1)} 15 ${z+rand(-1,1)};
+        dur:${rand(5000,12000)};
+        loop:true;
+        easing:easeInOutSine
+        `
+    );
+
+    world.appendChild(bubble);
+}
+
+
+// ------------------------------------------------------------
+// GLOWING PARTICLES
+// ------------------------------------------------------------
+
+for(let i=0;i<160;i++) {
+
+    const particle = document.createElement("a-sphere");
+
+    particle.setAttribute(
+        "position",
+        `${rand(-40,40)} ${rand(-5,15)} ${rand(-45,5)}`
+    );
+
+    particle.setAttribute(
+        "radius",
+        rand(0.015,0.045)
+    );
+
+    particle.setAttribute(
+        "material",
+        `
+        color:${choose([
+            "#ffffff",
+            "#5fffff",
+            "#66ffdd",
+            "#c4ffff"
+        ])};
+        emissive:#55ddff;
+        emissiveIntensity:1
+        `
+    );
+
+    particle.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${rand(-40,40)} ${rand(-5,15)} ${rand(-45,5)};
+        dur:${rand(5000,12000)};
+        loop:true
+        `
+    );
+
+    world.appendChild(particle);
+}
+
+
+// ------------------------------------------------------------
+// TURTLES
+// ------------------------------------------------------------
+
+function createTurtle(x,y,z) {
+
+    const turtle = document.createElement("a-entity");
+
+    turtle.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    const shell = document.createElement("a-sphere");
+
+    shell.setAttribute(
+        "scale",
+        "1.5 0.55 1.2"
+    );
+
+    shell.setAttribute(
+        "material",
+        "color:#237a58; roughness:0.5"
+    );
+
+    turtle.appendChild(shell);
+
+
+    // Head
+
+    const head = document.createElement("a-sphere");
+
+    head.setAttribute(
+        "position",
+        "1.5 0 0"
+    );
+
+    head.setAttribute(
+        "radius",
+        "0.45"
+    );
+
+    head.setAttribute(
+        "material",
+        "color:#42a66f"
+    );
+
+    turtle.appendChild(head);
+
+
+    // Flippers
+
+    const flipperPositions = [
+        ["0.5","0","1.2"],
+        ["0.5","0","-1.2"],
+        ["-0.8","0","1.1"],
+        ["-0.8","0","-1.1"]
+    ];
+
+    flipperPositions.forEach(p => {
+
+        const f = document.createElement("a-box");
+
+        f.setAttribute(
+            "position",
+            `${p[0]} ${p[1]} ${p[2]}`
+        );
+
+        f.setAttribute(
+            "scale",
+            "0.9 0.15 0.35"
+        );
+
+        f.setAttribute(
+            "rotation",
+            "0 0 25"
+        );
+
+        f.setAttribute(
+            "material",
+            "color:#42a66f"
+        );
+
+        turtle.appendChild(f);
+    });
+
+
+    turtle.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${x+rand(-15,15)} ${y+rand(-2,2)} ${z};
+        dur:18000;
+        loop:true;
+        dir:alternate
+        `
+    );
+
+    world.appendChild(turtle);
+}
+
+
+createTurtle(-12,3,-25);
+createTurtle(15,4,-35);
+createTurtle(5,8,-15);
+
+
+// ------------------------------------------------------------
+// STINGRAYS
+// ------------------------------------------------------------
+
+function createRay(x,y,z) {
+
+    const ray = document.createElement("a-entity");
+
+    ray.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    const body = document.createElement("a-sphere");
+
+    body.setAttribute(
+        "scale",
+        "2.2 0.25 1.5"
+    );
+
+    body.setAttribute(
+        "material",
+        "color:#6c5b8f"
+    );
+
+    ray.appendChild(body);
+
+
+    const tail = document.createElement("a-cylinder");
+
+    tail.setAttribute(
+        "position",
+        "-2 0 0"
+    );
+
+    tail.setAttribute(
+        "radius",
+        "0.06"
+    );
+
+    tail.setAttribute(
+        "height",
+        "4"
+    );
+
+    tail.setAttribute(
+        "rotation",
+        "0 0 90"
+    );
+
+    tail.setAttribute(
+        "material",
+        "color:#78679d"
+    );
+
+    ray.appendChild(tail);
+
+
+    ray.setAttribute(
+        "animation",
+        `
+        property:position;
+        to:${x+rand(-15,15)} ${y+rand(-2,3)} ${z+rand(-5,5)};
+        dur:15000;
+        loop:true;
+        dir:alternate;
+        easing:easeInOutSine
+        `
+    );
+
+    world.appendChild(ray);
+}
+
+
+createRay(-15,9,-25);
+createRay(15,6,-30);
+createRay(0,11,-40);
+
+
+// ------------------------------------------------------------
+// GIANT CORAL ARCH
+// ------------------------------------------------------------
+
+for(let i=0;i<15;i++) {
+
+    const pillar = document.createElement("a-cylinder");
+
+    const angle = (i/14)*Math.PI;
+
+    const x = Math.cos(angle)*8;
+    const y = Math.sin(angle)*5 - 4;
+    const z = -35;
+
+    pillar.setAttribute(
+        "position",
+        `${x} ${y} ${z}`
+    );
+
+    pillar.setAttribute(
+        "radius",
+        "0.7"
+    );
+
+    pillar.setAttribute(
+        "height",
+        "3"
+    );
+
+    pillar.setAttribute(
+        "rotation",
+        `0 0 ${Math.cos(angle)*35}`
+    );
+
+    pillar.setAttribute(
+        "material",
+        `color:${choose(coralColors)}`
+    );
+
+    world.appendChild(pillar);
+}
+
+
+// ------------------------------------------------------------
+// DISTANT BIOLUMINESCENT DOTS
+// ------------------------------------------------------------
+
+for(let i=0;i<100;i++) {
+
+    const dot = document.createElement("a-sphere");
+
+    dot.setAttribute(
+        "position",
+        `${rand(-40,40)} ${rand(-6,15)} ${rand(-50,-35)}`
+    );
+
+    dot.setAttribute(
+        "radius",
+        rand(0.04,0.12)
+    );
+
+    const c = choose([
+        "#00ffff",
+        "#00ff99",
+        "#ff00ff",
+        "#8c52ff"
+    ]);
+
+    dot.setAttribute(
+        "material",
+        `
+        color:${c};
+        emissive:${c};
+        emissiveIntensity:4
+        `
+    );
+
+    dot.setAttribute(
+        "animation",
+        `
+        property:scale;
+        from:0.5 0.5 0.5;
+        to:1.7 1.7 1.7;
+        dur:${rand(700,1800)};
+        loop:true;
+        dir:alternate
+        `
+    );
+
+    world.appendChild(dot);
+}
+
+</script>
+
+
+<!-- ========================================================= -->
+<!-- FOREGROUND CORAL -->
+<!-- ========================================================= -->
+
+<a-entity position="0 -8.5 -10">
+
+    <a-cylinder
+        position="-3 1 0"
+        radius="0.35"
+        height="4"
+        color="#ff3c8e">
+    </a-cylinder>
+
+    <a-cylinder
+        position="-2.5 1.5 0"
+        radius="0.25"
+        height="5"
+        rotation="0 0 -20"
+        color="#ff7a00">
+    </a-cylinder>
+
+    <a-cylinder
+        position="-1.5 1.2 0"
+        radius="0.3"
+        height="4"
+        rotation="0 0 20"
+        color="#00eaff">
+    </a-cylinder>
+
+    <a-cylinder
+        position="2 1.5 0"
+        radius="0.3"
+        height="5"
+        rotation="0 0 -20"
+        color="#a855f7">
+    </a-cylinder>
+
+    <a-cylinder
+        position="3 1.2 0"
+        radius="0.35"
+        height="4"
+        rotation="0 0 25"
+        color="#ff3377">
+    </a-cylinder>
+
+</a-entity>
+
+
+<!-- ========================================================= -->
+<!-- LARGE TITLE -->
+<!-- ========================================================= -->
+
+<a-text
+    value="WELCOME TO THE DEEP"
+    position="0 12 -30"
+    align="center"
+    width="18"
+    color="#7ffaff"
+    side="double"
+    opacity="0.8">
+</a-text>
+
+
+</a-scene>
+
+</body>
+</html>
